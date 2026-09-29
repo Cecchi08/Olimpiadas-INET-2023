@@ -1,0 +1,2 @@
+.area { position: absolute; transform: translate(-50%, -50%); object-fit: fill; user-select: none; }.label { position: absolute; transform: translateX(-50%); font-size: clamp(6px, .67vw, 11px); font-weight: 600; white-space: nowrap; color: #52677f; z-index: 2; pointer-events: none; background: #ffffffb0; border-radius: 3px; padding: 1px 4px; }
+

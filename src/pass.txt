@@ -1,0 +1,1 @@
+UPDATE perfiles SET rol = 'Administrador' WHERE email = 'admin@hospital.com';
