@@ -12,9 +12,11 @@ create table public.perfiles (
 create table public.areas (
   id serial primary key,
   nombre text not null check (char_length(trim(nombre)) between 1 and 120),
-  tipo text not null check (tipo in ('Quirofano', 'Habitacion', 'Bano', 'Recepcion', 'SalaEspera')),
+  tipo text not null check (tipo in ('Quirofano', 'Habitacion', 'Bano', 'Recepcion', 'Secretaria', 'SalaEspera', 'Enfermeria', 'Pasillo')),
   coord_x double precision not null check (coord_x > '-Infinity'::float8 and coord_x < 'Infinity'::float8),
-  coord_y double precision not null check (coord_y > '-Infinity'::float8 and coord_y < 'Infinity'::float8)
+  coord_y double precision not null check (coord_y > '-Infinity'::float8 and coord_y < 'Infinity'::float8),
+  ancho double precision not null default 20 check (ancho > 0 and ancho <= 100),
+  alto double precision not null default 18 check (alto > 0 and alto <= 100)
 );
 
 create table public.camas (

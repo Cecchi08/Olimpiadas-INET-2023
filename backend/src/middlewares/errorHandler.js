@@ -7,6 +7,9 @@ export function errorHandler(error, req, res, next) {
   if (!(error instanceof AppError)) console.error('Error interno', { name: error.name });
   res.status(error instanceof AppError ? error.status : 500).json({
     error: error instanceof AppError ? error.message : 'Error interno del servidor',
-    ...(error.details ? { detalles: error.details } : {})
+    ...(error.details ? {
+      detalles: error.details,
+      details: error.details.map(detail => ({ field: detail.campo, message: detail.mensaje }))
+    } : {})
   });
 }

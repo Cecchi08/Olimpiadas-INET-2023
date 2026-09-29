@@ -15,6 +15,10 @@ export function dbResult({ data, error }) {
       '23514': [400, 'Los datos incumplen una restricción'],
       '22P02': [400, 'Formato de datos inválido'],
       PGRST116: [404, 'Registro no encontrado'],
+      PGRST205: [503, 'Faltan tablas en Supabase. Ejecutar backend/supabase/schema.sql en un proyecto nuevo.'],
+      PGRST202: [503, 'Faltan funciones en Supabase. Revisar la instalación del esquema.'],
+      PGRST204: [503, 'El esquema de Supabase está desactualizado. Aplicar la actualización de backend/supabase/migrations.'],
+      '42703': [503, 'El esquema de Supabase está desactualizado. Aplicar la actualización de backend/supabase/migrations.'],
       PT400: [400, error.message], PT404: [404, error.message], PT409: [409, error.message]
     };
     const mapped = errors[error.code];

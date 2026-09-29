@@ -1538,20 +1538,20 @@ npm run export:code
 
 Build: dist/. Las pruebas usan Edge instalado, respuestas HTTP simuladas y Socket.IO real en los puertos 5179 y 3099. No requieren credenciales ni datos reales. Para Chromium, quitar `channel: 'msedge'` de playwright.config.js y ejecutar `npx playwright install chromium`. Capturas: test-results/. El último comando genera CODIGO_FRONTEND.md con los archivos completos en el orden solicitado.
 
-## Contrato e integración pendiente
+## Contrato e integración
 
-**El backend existente necesita adaptar su contrato para completar la integración.** El frontend implementa los nombres exactos del pedido.
+El backend de este repositorio está en `backend/` y acepta los nombres del frontend. Para una base nueva, instalar `backend/supabase/schema.sql`; para una base anterior, aplicar `backend/supabase/migrations/20260929152210_frontend_contract.sql`.
 
-| Recurso | Frontend solicitado | Backend existente |
+| Recurso | Frontend | Backend |
 | --- | --- | --- |
-| Coordenadas | coordenadas_x, coordenadas_y | coord_x, coord_y |
-| Dimensiones de áreas | ancho, alto | No se persisten |
-| Tipos de área | Ocho tipos | Faltan Secretaria, Enfermeria, Pasillo |
-| Enfermero del paciente | enfermero_asignado_id | enfermero_id |
-| Origen | Cama / Baño | Cama / Bano |
-| Listado de perfiles | GET /api/usuarios, solo admin | No implementado |
+| Coordenadas | coordenadas_x, coordenadas_y | Acepta y devuelve estos nombres; conserva coord_x/y en PostgreSQL |
+| Dimensiones de áreas | ancho, alto | Persistidas en PostgreSQL |
+| Tipos de área | Ocho tipos | Los ocho tipos admitidos |
+| Enfermero del paciente | enfermero_asignado_id | Adaptado a enfermero_id en PostgreSQL |
+| Origen | Cama / Baño | Acepta Baño y Bano; devuelve Baño |
+| Listado de perfiles | GET /api/usuarios, solo admin | Listado paginado protegido |
 
-Las escrituras mantienen el contrato solicitado. Alinear las validaciones y campos del backend antes de usar altas/ediciones de áreas y asignaciones. El mapa puede leer coord_x/coord_y y usar dimensiones de referencia para áreas conocidas; la tabla muestra los datos persistidos. La lectura admite enfermero_id, fecha_activacion y tiempo_respuesta_seg como aliases.
+Las escrituras mantienen el contrato solicitado. El mapa admite también coord_x/coord_y y dimensiones de referencia para áreas conocidas; la tabla muestra los datos persistidos. La lectura admite enfermero_id, fecha_activacion y tiempo_respuesta_seg como aliases.
 
 GET /api/usuarios debe devolver perfiles { id, email, rol }. Ante su ausencia, se muestra un error y el registro POST /api/auth/register sigue disponible; los perfiles creados se muestran durante la sesión. Los enfermeros del mapa se deducen de asignaciones de pacientes, no de ubicación física en vivo. El formulario admite el ID del perfil y sugiere perfiles conocidos.
 

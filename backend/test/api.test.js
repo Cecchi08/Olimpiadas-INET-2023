@@ -78,6 +78,7 @@ test('HTTP: autenticación, permisos y validaciones', async () => {
   const adminToken = auth.sign(admin);
   const nurseToken = auth.sign(nurse);
   await request(app).get('/health').expect(200);
+  await request(app).get('/health/ready').expect(200);
   await request(app).get('/api/pacientes').expect(401);
   await request(app).get('/api/auth/me').set('Authorization', 'Bearer fake').expect(401);
   await request(app).get('/health').set('Origin', 'https://intruso.example').expect(403);
@@ -103,6 +104,56 @@ test('HTTP: autenticación, permisos y validaciones', async () => {
   await request(app).get('/api/auth/me').set('Authorization', `Bearer ${expired}`).expect(401);
   state.profiles = state.profiles.map(p => p.id === admin.id ? { ...p, rol: 'Generico' } : p);
   await request(app).post('/api/areas').set('Authorization', `Bearer ${adminToken}`).send({}).expect(403);
+});
+
+test('HTTP: contrato del frontend, dimensiones, enfermero y directorio protegido', async () => {
+  const { app, auth, state } = fixture();
+  const adminHeader = { Authorization: `Bearer ${auth.sign(admin)}` };
+  const nurseHeader = { Authorization: `Bearer ${auth.sign(nurse)}` };
+  const area = await request(app).post('/api/areas').set(adminHeader).send({
+    nombre: 'Enfermería', tipo: 'Enfermeria', coordenadas_x: 82, coordenadas_y: 17, ancho: 20, alto: 20
+  }).expect(201);
+  assert.equal(area.body.coordenadas_x, 82);
+  assert.equal(area.body.alto, 20);
+  assert.deepEqual(state.mutations.at(-1).input, {
+    nombre: 'Enfermería', tipo: 'Enfermeria', coord_x: 82, coord_y: 17, ancho: 20, alto: 20
+  });
+  await request(app).put('/api/areas/1').set(adminHeader).send({ ancho: 25, alto: 22 }).expect(200);
+  assert.deepEqual(state.mutations.at(-1).input, { ancho: 25, alto: 22 });
+  const invalid = await request(app).put('/api/areas/1').set(adminHeader).send({ ancho: -1 }).expect(400);
+  assert.equal(invalid.body.details[0].field, 'ancho');
+  assert.ok(invalid.body.details[0].message);
+  await request(app).put('/api/areas/1').set(adminHeader)
+    .send({ coordenadas_x: 10, coord_x: 20 }).expect(400);
+  const patient = await request(app).put('/api/pacientes/1').set(nurseHeader)
+    .send({ enfermero_asignado_id: nurse.id }).expect(200);
+  assert.equal(patient.body.enfermero_asignado_id, nurse.id);
+  assert.deepEqual(state.mutations.at(-1).input, { enfermero_id: nurse.id });
+  await request(app).put('/api/pacientes/1').set(nurseHeader)
+    .send({ enfermero_asignado_id: null }).expect(200);
+  assert.deepEqual(state.mutations.at(-1).input, { enfermero_id: null });
+  const users = await request(app).get('/api/usuarios?page=1&limit=1').set(adminHeader).expect(200);
+  assert.equal(users.body.data.length, 1);
+  assert.equal(users.body.data[0].email, admin.email);
+  await request(app).get('/api/usuarios').set(nurseHeader).expect(403);
+  await request(app).get('/api/usuarios').expect(401);
+});
+
+test('HTTP: Baño en llamadas y filtros, aliases en eventos y fechas', async () => {
+  const { app, auth, state } = fixture();
+  const header = { Authorization: `Bearer ${auth.sign(nurse)}` };
+  const created = await request(app).post('/api/llamados/crear').set(header)
+    .send({ paciente_id: 1, area_id: 1, origen: 'Baño', tipo: 'Emergencia' }).expect(201);
+  assert.equal(state.calls[0].origen, 'Bano');
+  assert.equal(created.body.origen, 'Baño');
+  assert.equal(created.body.fecha_hora_activacion, created.body.fecha_activacion);
+  assert.equal(state.events[0].payload.origen, 'Baño');
+  const listed = await request(app).get('/api/llamados').query({ origen: 'Baño' }).set(header).expect(200);
+  assert.equal(listed.body.data.length, 1);
+  assert.equal(listed.body.data[0].origen, 'Baño');
+  const attended = await request(app).put('/api/llamados/1/atender').set(header).expect(200);
+  assert.equal(attended.body.tiempo_respuesta_segundos, 15);
+  assert.equal(state.events.find(event => event.event === 'llamadoAtendido').payload.tiempo_respuesta_segundos, 15);
 });
 
 test('HTTP: flujo de emergencia y eventos después de guardar', async () => {

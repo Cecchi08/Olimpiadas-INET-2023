@@ -13,6 +13,7 @@ export function createRoutes(controllers, authMiddleware) {
   router.use(authMiddleware);
   router.post('/auth/register', admin, v.registerRules(), v.validate, controllers.auth.register);
   router.get('/auth/me', controllers.auth.me);
+  router.get('/usuarios', admin, v.pagingRules(), v.validate, controllers.usuarios.list);
 
   for (const [resource, rules, filters] of [
     ['areas', v.areaRules, () => []],

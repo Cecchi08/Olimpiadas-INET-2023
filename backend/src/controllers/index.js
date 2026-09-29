@@ -1,6 +1,7 @@
 import { AppError, dbResult } from '../utils/errors.js';
 import { paginate, applyFilters, allLlamados, llamadoSelect, pacienteSelect } from '../utils/queries.js';
 import { createCsv, createPdf } from '../utils/exports.js';
+import { presentarRegistro, presentarListado } from '../utils/contrato.js';
 
 export function createControllers({ db, newAuthClient, auth, publish }) {
   function crud(table, select = '*') {
@@ -8,17 +9,17 @@ export function createControllers({ db, newAuthClient, auth, publish }) {
       list: async (req, res) => {
         let query = db.from(table).select(select, { count: 'exact' });
         const area = req.filters.area_id ?? req.filters.area;
-        const nurse = req.filters.enfermero_id ?? req.filters.enfermero;
+        const nurse = req.filters.enfermero_asignado_id ?? req.filters.enfermero_id ?? req.filters.enfermero;
         if (area !== undefined) query = query.eq('area_id', area);
         if (nurse !== undefined) query = query.eq('enfermero_id', nurse);
-        res.json(await paginate(query, req.filters));
+        res.json(presentarListado(await paginate(query, req.filters)));
       },
-      get: async (req, res) => res.json(dbResult(await db.from(table)
-        .select(select).eq('id', req.params.id).single())),
-      create: async (req, res) => res.status(201).json(dbResult(await db.from(table)
-        .insert(req.input).select(select).single())),
-      update: async (req, res) => res.json(dbResult(await db.from(table)
-        .update(req.input).eq('id', req.params.id).select(select).single())),
+      get: async (req, res) => res.json(presentarRegistro(dbResult(await db.from(table)
+        .select(select).eq('id', req.params.id).single()))),
+      create: async (req, res) => res.status(201).json(presentarRegistro(dbResult(await db.from(table)
+        .insert(req.input).select(select).single()))),
+      update: async (req, res) => res.json(presentarRegistro(dbResult(await db.from(table)
+        .update(req.input).eq('id', req.params.id).select(select).single()))),
       remove: async (req, res) => {
         dbResult(await db.from(table).delete().eq('id', req.params.id).select('id').single());
         res.status(204).end();
@@ -66,24 +67,24 @@ export function createControllers({ db, newAuthClient, auth, publish }) {
         p_paciente_id: req.input.paciente_id, p_area_id: req.input.area_id,
         p_origen: req.input.origen, p_tipo: req.input.tipo
       }));
-      const event = { ...row, timestamp: row.fecha_activacion };
+      const event = { ...presentarRegistro(row), timestamp: row.fecha_activacion };
       publish('nuevoLlamado', event);
       if (row.tipo === 'Emergencia') publish('codigoAzul', event);
       publish('logSistema', `Llamado #${row.id} activado (${row.tipo}).`);
-      res.status(201).json(row);
+      res.status(201).json(presentarRegistro(row));
     },
     attend: async (req, res) => {
       const row = dbResult(await db.rpc('atender_llamado', {
         p_id: Number(req.params.id), p_enfermero_id: req.user.id
       }));
-      publish('llamadoAtendido', { id: row.id, tiempo_respuesta_seg: row.tiempo_respuesta_seg,
-        enfermero: row.enfermero, fecha_atencion: row.fecha_atencion });
+      publish('llamadoAtendido', presentarRegistro({ id: row.id, tiempo_respuesta_seg: row.tiempo_respuesta_seg,
+        enfermero: row.enfermero, fecha_atencion: row.fecha_atencion }));
       publish('logSistema', `Llamado #${row.id} atendido en ${row.tiempo_respuesta_seg} segundos.`);
-      res.json(row);
+      res.json(presentarRegistro(row));
     },
-    list: async (req, res) => res.json(await paginate(applyFilters(
+    list: async (req, res) => res.json(presentarListado(await paginate(applyFilters(
       db.from('llamados').select(llamadoSelect, { count: 'exact' }), req.filters
-    ), req.filters)),
+    ), req.filters))),
     active: async (req, res) => {
       req.filters.estado = 'No Atendido';
       return llamados.list(req, res);
@@ -105,6 +106,6 @@ export function createControllers({ db, newAuthClient, auth, publish }) {
       res.attachment('llamados.pdf').type('application/pdf').send(pdf);
     }
   };
-  return { auth: authController, areas: crud('areas'), camas: crud('camas', '*,area:areas(*)'),
+  return { auth: authController, usuarios: crud('perfiles', 'id,email,rol'), areas: crud('areas'), camas: crud('camas', '*,area:areas(*)'),
     pacientes: crud('pacientes', pacienteSelect), llamados, reportes };
 }
