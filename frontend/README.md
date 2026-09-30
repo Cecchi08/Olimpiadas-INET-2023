@@ -36,29 +36,30 @@ Build: dist/. Las pruebas usan Edge instalado, respuestas HTTP simuladas y Socke
 
 ## Contrato e integración
 
-El backend de este repositorio está en `backend/` y acepta los nombres del frontend. Para una base nueva, instalar `backend/supabase/schema.sql`; para una base anterior, aplicar `backend/supabase/migrations/20260929152210_frontend_contract.sql`.
+El backend de este repositorio está en `backend/` y acepta los nombres del frontend. Aplicar `backend/supabase/migrations/20260930140537_demo_codigo_azul.sql` al esquema existente. Para una base nueva, instalar primero `backend/supabase/schema.sql`. Preparación y prueba del demo: [DEMO.md](../DEMO.md).
 
 | Recurso | Frontend | Backend |
 | --- | --- | --- |
-| Coordenadas | coordenadas_x, coordenadas_y | Acepta y devuelve estos nombres; conserva coord_x/y en PostgreSQL |
+| Coordenadas | coordenadas_x, coordenadas_y | La migración normaliza PostgreSQL a estos nombres |
 | Dimensiones de áreas | ancho, alto | Persistidas en PostgreSQL |
 | Tipos de área | Ocho tipos | Los ocho tipos admitidos |
-| Enfermero del paciente | enfermero_asignado_id | Adaptado a enfermero_id en PostgreSQL |
+| Enfermero del paciente | enfermero_asignado_id | Selector cargado desde GET /api/enfermeros |
 | Origen | Cama / Baño | Acepta Baño y Bano; devuelve Baño |
-| Listado de perfiles | GET /api/usuarios, solo admin | Listado paginado protegido |
+| Listado de perfiles | GET /api/auth/usuarios, solo admin | Listado paginado protegido |
 
 Las escrituras mantienen el contrato solicitado. El mapa admite también coord_x/coord_y y dimensiones de referencia para áreas conocidas; la tabla muestra los datos persistidos. La lectura admite enfermero_id, fecha_activacion y tiempo_respuesta_seg como aliases.
 
-GET /api/usuarios debe devolver perfiles { id, email, rol }. Ante su ausencia, se muestra un error y el registro POST /api/auth/register sigue disponible; los perfiles creados se muestran durante la sesión. Los enfermeros del mapa se deducen de asignaciones de pacientes, no de ubicación física en vivo. El formulario admite el ID del perfil y sugiere perfiles conocidos.
+Usuarios permite crear, cambiar rol y eliminar; Enfermeros agrega nombre, área, turno y contador de pacientes; Camas permite CRUD y filtro por área. Los enfermeros del mapa se cargan desde GET /api/enfermeros y parten de su área asignada. El servidor decide el enfermero disponible para cada simulación; las posiciones muestran la animación del demo.
 
-Se respetan los permisos del backend existente: crear/eliminar pacientes, gestionar áreas y registrar usuarios requieren Administrador; Generico puede editar pacientes. El backend debe validar permisos en cada operación.
+Administrador y Generico pueden crear, editar y eliminar pacientes. Gestionar áreas, camas y usuarios requiere Administrador. El backend valida los permisos en cada operación.
 
 ## Endpoints
 
 - POST /api/auth/login, GET /api/auth/me, POST /api/auth/register.
 - GET/POST /api/pacientes; PUT/DELETE /api/pacientes/:id.
-- GET/POST /api/areas; PUT/DELETE /api/areas/:id; GET /api/camas.
-- GET /api/usuarios.
+- GET/POST /api/areas; PUT/DELETE /api/areas/:id; GET/POST /api/camas; PUT/DELETE /api/camas/:id.
+- GET /api/auth/usuarios; PUT /api/auth/usuarios/:id/rol; PUT/DELETE /api/auth/usuarios/:id; GET /api/enfermeros.
+- POST /api/llamados/crear con simulacion: true desde el modal o una cama ocupada.
 - GET /api/llamados/activos, GET /api/llamados, PUT /api/llamados/:id/atender.
 - GET /api/reportes/estadisticas, /api/reportes/export/pdf y /api/reportes/export/csv.
 
@@ -91,7 +92,7 @@ Las áreas y camas usan coordenadas porcentuales globales de un canvas 1920×108
 
 El token se guarda en localStorage bajo codigoAzul.token. GET /api/auth/me valida la sesión; un 401 autenticado la cierra. El login muestra su propio error 401. Los cambios de sesión se sincronizan entre pestañas.
 
-El socket autentica con token y emite join/hospital. Escucha nuevoLlamado, llamadoAtendido, codigoAzul y logSistema. Al conectar o reconectar obtiene los llamados activos y reconcilia eventos recibidos durante la consulta. La consola conserva los últimos 500 eventos. Las desconexiones marcan el estado como no sincronizado. El overlay dura tres segundos y respeta movimiento reducido.
+El socket autentica con token; el servidor incorpora la conexión a hospital y a la sala personal. Escucha nuevoLlamado, llamadoAtendido, codigoAzul, logSistema y notificacionEnfermero. Al conectar o reconectar obtiene los llamados activos y reconcilia eventos recibidos durante la consulta; también consulta cada diez segundos. La consola conserva los últimos 500 eventos. Las desconexiones marcan el estado como no sincronizado. El overlay dura tres segundos y respeta movimiento reducido. La atención automática del demo ocurre en el servidor a los treinta segundos y permanece operativa al cerrar la pestaña.
 
 ## Vercel
 

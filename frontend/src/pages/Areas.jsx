@@ -4,6 +4,7 @@ import { TIPOS_AREA, NOMBRES_TIPO } from '../utils/constantes';
 import TablaGenerica from '../components/TablaGenerica';
 import Modal from '../components/Modal';
 import ConfirmarEliminar from '../components/ConfirmarEliminar';
+import Feedback from '../components/Feedback';
 import styles from './Areas.module.css';
 import ui from '../styles/ui.module.css';
 export default function Areas() {
@@ -23,6 +24,7 @@ export default function Areas() {
   }
   return <div className={styles.page}><div className={ui.header}><div><p className={ui.eyebrow}>ADMINISTRACIÓN</p><h1 className={ui.title}>Áreas del hospital</h1><p className={ui.subtitle}>Organizá los espacios y su ubicación en el plano.</p></div><button className={ui.primary} onClick={() => crud.edit()}>＋ Nueva Área</button></div>
     <p className={styles.hint}>Las coordenadas indican el centro de cada área. Todas las medidas se expresan en porcentajes del plano.</p>
+    <Feedback success={crud.success} loading={loading} />
     {error && <p className={ui.error} role="alert">{error} <button className={ui.secondary} onClick={reload}>Reintentar</button></p>}
     <TablaGenerica columns={columns} rows={rows} loading={loading} actions={row => <><button className={ui.secondary} onClick={() => crud.edit(row)}>Editar</button><button className={ui.danger} onClick={() => crud.remove(row)}>Eliminar</button></>} />
     {crud.editing && <Modal title={crud.editing.id ? 'Editar área' : 'Nueva área'} onClose={crud.close}><form className={ui.form} onSubmit={submit} onChange={event => event.currentTarget.elements.ancho.setCustomValidity('')}>
@@ -34,4 +36,3 @@ export default function Areas() {
     <ConfirmarEliminar crud={crud} />
   </div>;
 }
-

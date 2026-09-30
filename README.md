@@ -7,10 +7,12 @@ frontend/          Aplicación React, recursos y pruebas de navegador
 backend/           API, configuración, SQL, dependencias y pruebas del servidor
 .gitignore
 README.md
-CODIGO_COMPLETO.md Código completo del backend
+CODIGO_COMPLETO.md Código completo del backend y frontend; SQL al final
 ```
 
 ## Ejecutar el backend
+
+**Demo completo:** aplicar la migración y seguir [DEMO.md](DEMO.md) para preparar pacientes/enfermeros y probar la simulación, su atención manual y la automática a los 30 segundos.
 
 Requiere Node.js 24. Desde la raíz:
 

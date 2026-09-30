@@ -4,7 +4,7 @@ import Icon from './Icon';
 import styles from './Sidebar.module.css';
 export default function Sidebar() {
   const { usuario, rol, logout } = useAuth();
-  const links = [['dashboard', 'Dashboard'], ['pacientes', 'Pacientes'], ...(rol === 'Administrador' ? [['areas', 'Áreas'], ['usuarios', 'Usuarios']] : []), ['reportes', 'Reportes']];
+  const links = [['dashboard', 'Dashboard'], ['pacientes', 'Pacientes'], ...(rol === 'Administrador' ? [['areas', 'Áreas'], ['camas', 'Camas'], ['enfermeros', 'Enfermeros'], ['usuarios', 'Usuarios']] : []), ['reportes', 'Reportes']];
   return <aside className={styles.sidebar}>
     <a href="#contenido" className={styles.skip}>Ir al contenido</a>
     <NavLink to="/dashboard" className={styles.brand}><span className={styles.cross}>+</span><span>Código Azul<small>GESTIÓN HOSPITALARIA</small></span></NavLink>
@@ -15,4 +15,3 @@ export default function Sidebar() {
     <button className={styles.logout} onClick={logout}><Icon name="logout" size={17} />Cerrar sesión</button>
   </aside>;
 }
-

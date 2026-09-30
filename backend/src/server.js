@@ -9,7 +9,7 @@ try {
   const clients = createSupabase(env);
   let io;
   const { app, auth } = createApp({ env, ...clients,
-    publish: (event, payload) => io.to('hospital').emit(event, payload) });
+    publish: (event, payload, room = 'hospital') => io.to(room).emit(event, payload) });
   const server = createServer(app);
   io = configureSockets(server, env, auth);
   server.on('error', error => {
@@ -20,6 +20,7 @@ try {
     io.close();
   });
   server.listen(env.port, '0.0.0.0', () => {
+    app.locals.simulation.start();
     console.log(`Código Azul escuchando en http://localhost:${env.port}`);
     process.send?.({ type: 'ready', port: env.port });
   });
@@ -28,6 +29,7 @@ try {
   function shutdown() {
     if (stopping) return;
     stopping = true;
+    app.locals.simulation.stop();
     console.log('Deteniendo Código Azul…');
     const timeout = setTimeout(() => process.exit(1), 10000);
     timeout.unref();

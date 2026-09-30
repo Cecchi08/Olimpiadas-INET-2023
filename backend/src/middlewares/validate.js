@@ -19,13 +19,21 @@ const coordinates = () => [alias('coordenadas_x', 'coord_x'), alias('coordenadas
 const origin = field => field.customSanitizer(value => value === 'Baño' ? 'Bano' : value).isIn(['Cama', 'Bano']);
 
 export const idRule = () => positiveId(param('id'));
+export const uuidRule = () => param('id').isUUID();
+const staffRules = () => [
+  body('nombre').optional().isString().bail().trim().isLength({ max: 160 }),
+  positiveId(body('area_asignada_id').optional({ values: 'null' })),
+  body('turno').optional({ values: 'null' }).isIn(['Manana', 'Tarde', 'Noche'])
+];
+export const userRules = () => [body('rol').optional().isIn(['Administrador', 'Generico']), ...staffRules()];
+export const roleRules = () => [body('rol').isIn(['Administrador', 'Generico'])];
 export const loginRules = () => [
   body('email').isString().bail().trim().isEmail().isLength({ max: 254 }).toLowerCase(),
   body('password').isString().bail().isLength({ min: 1, max: 128 })
 ];
 export const registerRules = () => [
   ...loginRules(), body('password').isLength({ min: 12, max: 128 }),
-  body('rol').isIn(['Administrador', 'Generico'])
+  body('rol').isIn(['Administrador', 'Generico']), ...staffRules()
 ];
 export const areaRules = (partial = false) => [
   ...coordinates(),
@@ -49,9 +57,10 @@ export const pacienteRules = (partial = false) => [
   positiveId(optional(body('area_id'), partial)),
   body('enfermero_id').optional({ values: 'null' }).isUUID()
 ];
-export const llamadoRules = () => [
-  positiveId(body('paciente_id')), positiveId(body('area_id')),
-  origin(body('origen')), body('tipo').isIn(['Normal', 'Emergencia'])
+export const llamadoRules = (optionalArea = true) => [
+  positiveId(body('paciente_id')), positiveId(optional(body('area_id'), optionalArea)),
+  origin(body('origen')), body('tipo').isIn(['Normal', 'Emergencia']),
+  body('simulacion').optional().isBoolean({ strict: true })
 ];
 export const pagingRules = () => [
   positiveId(query('page').optional()), query('limit').optional().isInt({ min: 1, max: 500 }).toInt()

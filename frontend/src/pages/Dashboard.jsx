@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import { useRecursos } from '../hooks/useRecursos';
-import api, { mensajeError } from '../services/api';
+import { mensajeError } from '../services/api';
 import MapaHospital from '../components/MapaHospital';
 import Consola from '../components/Consola';
 import Icon from '../components/Icon';
@@ -9,14 +9,14 @@ import { formatearHora } from '../utils/formateoFechas';
 import styles from './Dashboard.module.css';
 import ui from '../styles/ui.module.css';
 export default function Dashboard() {
-  const { activos, conectado, sincronizado } = useSocket();
+  const { activos, conectado, sincronizado, atenderLlamado } = useSocket();
   const { data, loading, error } = useRecursos(['/api/pacientes', '/api/camas']);
   const [pending, setPending] = useState(null);
   const [actionError, setActionError] = useState('');
   const [atendidos, setAtendidos] = useState([]);
   async function atender(id) {
     setPending(id); setActionError('');
-    try { await api.put(`/api/llamados/${id}/atender`, {}); setAtendidos(previous => [...previous, id]); }
+    try { await atenderLlamado(id); setAtendidos(previous => [...previous, id]); }
     catch (err) { setActionError(mensajeError(err)); }
     finally { setPending(null); }
   }
@@ -39,4 +39,3 @@ export default function Dashboard() {
     </section>
   </>;
 }
-

@@ -1,0 +1,2 @@
+.avatar { position: absolute; transform: translate(-50%,-50%); z-index: 6; pointer-events: none; display: grid; justify-items: center; }.avatar span { width: 26px; height: 26px; border-radius: 50%; border: 2px solid white; background: #2563eb; display: grid; place-items: center; box-shadow: 0 2px 7px #0003; }.avatar small { background: #ffffffed; color: #174bb5; border-radius: 4px; padding: 2px 4px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(6px,.65vw,10px); }
+.avatar span { color: white; font-weight: 700; }

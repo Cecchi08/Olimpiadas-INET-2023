@@ -1,5 +1,29 @@
 # Código Azul — Backend
 
+## Corrección de PGRST200
+
+Los controladores usan consultas planas y completan `area`, `cama`, `paciente` y `enfermero` mediante búsquedas por lotes de IDs. No dependen de la detección de relaciones de PostgREST. Se preservan paginación, totales, filtros y objetos anidados; las relaciones nulas o inaccesibles por RLS se presentan como null. Los errores de consulta se propagan.
+
+`src/utils/queries.js` detecta, sin descargar filas, los nombres de columnas del esquema histórico y los del esquema desplegado (`coordenadas_x`, `enfermero_asignado_id`, `fecha_hora_activacion`, etc.). Cachea la detección por cliente/tabla. Reiniciar el backend después de renombrar columnas. Los filtros y las escrituras usan los nombres detectados.
+
+Para reproducir los errores originales sin leer registros clínicos:
+
+```sh
+node scripts/diagnose-relationships.mjs
+```
+
+El script contiene embeddings intencionalmente, para diagnóstico; el código de producción en `src` no los usa. `supabase/diagnose_relationships.sql` permite inspeccionar las FK sin modificar nada.
+
+En el proyecto revisado, funcionan las relaciones pacientes→perfiles, pacientes→áreas/camas y camas→áreas. Fallaban los joins directos llamados→camas y llamados→perfiles: el esquema desplegado no tiene esas FK ni sus columnas. `perfiles(nombre)` también es incorrecto porque perfiles contiene id/email/rol, sin nombre. La FK perfiles→auth.users no impide las relaciones entre tablas de public. No es necesario exponer auth ni crear vistas ni modificar FK para esta corrección.
+
+Si llamados no tiene cama_id/enfermero_atencion_id, la respuesta conserva `cama: null` y `enfermero: null`. No se deduce la cama histórica ni quién atendió a partir de la asignación actual del paciente. En el esquema histórico que sí guarda esas columnas, ambos objetos se completan normalmente.
+
+Las consultas separadas no constituyen una instantánea transaccional. En un alta o actualización, la escritura puede confirmarse aunque una lectura posterior de sus relaciones falle.
+
+El esquema remoto revisado tampoco publicaba las RPC crear_llamado, atender_llamado y estadisticas_llamados. La migración `supabase/migrations/20260930140537_demo_codigo_azul.sql` instala sus definiciones compatibles y los campos del demo, incluido nombre en perfiles. Ejecutarla en el SQL Editor antes de iniciar esta versión. No ejecutar schema.sql sobre tablas existentes: es una instalación inicial. La migración se entrega y prueba localmente; no se aplicó a la base remota. Ver [prueba completa](../DEMO.md).
+
+Referencias: [relaciones por FK en PostgREST](https://postgrest.org/en/stable/references/api/resource_embedding.html#foreign-key-joins), [errores de caché](https://postgrest.org/en/stable/references/errors.html#group-2-schema-cache), [schema auth de Supabase](https://supabase.com/docs/guides/auth/architecture).
+
 ## Instalación
 
 Requiere Node.js 24 y un proyecto Supabase con Data API habilitada para `public`.
@@ -15,13 +39,16 @@ cp .env.example .env
 En PowerShell: `if (!(Test-Path .env)) { Copy-Item .env.example .env }`. Conservar el archivo existente si ya está configurado.
 
 1. Ejecutar `supabase/schema.sql` completo en el SQL Editor de un proyecto nuevo. El archivo es de instalación inicial y se ejecuta una sola vez.
-   Para una instalación anterior, ejecutar solamente `supabase/migrations/20260929152210_frontend_contract.sql`; agrega dimensiones y tipos sin borrar registros y se puede repetir.
+   Después, ejecutar `supabase/migrations/20260930140537_demo_codigo_azul.sql`. Para el esquema existente descrito en este proyecto, ejecutar solamente esta última migración.
 2. En Supabase Auth, deshabilitar el registro público de usuarios. El backend utiliza `auth.admin.createUser`.
 3. Crear el primer usuario con email y contraseña desde **Authentication → Users → Add user**, con email confirmado.
 4. Asignarle el rol administrador desde el SQL Editor:
 
 ```sql
-update public.perfiles set rol = 'Administrador' where email = 'admin@hospital.com';
+-- Reemplazar el email por el de la cuenta creada en Authentication.
+insert into public.perfiles (id, email, rol)
+select id, email, 'Administrador' from auth.users where email = 'admin@hospital.com'
+on conflict (id) do update set email = excluded.email, rol = excluded.rol;
 select id, email, rol from public.perfiles where email = 'admin@hospital.com';
 ```
 
@@ -62,7 +89,12 @@ Content-Type: application/json
 | POST | `/api/auth/login` | Público: email, password |
 | POST | `/api/auth/register` | Admin: email, password (12–128 caracteres), rol |
 | GET | `/api/auth/me` | Autenticado |
-| GET | `/api/usuarios` | Admin: listado paginado de perfiles (id, email, rol) |
+| GET | `/api/auth/usuarios` | Admin: listado paginado de perfiles (id, email, rol) |
+| PUT | `/api/auth/usuarios/:id/rol` | Admin: rol obligatorio; no admite otros cambios |
+| PUT | `/api/auth/usuarios/:id` | Admin: rol, nombre, area_asignada_id, turno |
+| DELETE | `/api/auth/usuarios/:id` | Admin: elimina el usuario en Auth; impide borrar la propia cuenta |
+| GET | `/api/enfermeros` | Autenticado: perfiles Generico con área y contador de pacientes |
+| POST | `/api/simulacion/codigo-azul` | Autenticado: paciente_id, origen, tipo y area_id para baño |
 | GET | `/api/areas` | Autenticado |
 | POST | `/api/areas` | Admin: nombre, tipo, coordenadas_x, coordenadas_y; opcionales ancho, alto |
 | PUT | `/api/areas/:id` | Admin: campos a modificar |
@@ -73,10 +105,10 @@ Content-Type: application/json
 | DELETE | `/api/camas/:id` | Admin |
 | GET | `/api/pacientes` | Autenticado; filtros area_id/area y enfermero_id/enfermero |
 | GET | `/api/pacientes/:id` | Autenticado |
-| POST | `/api/pacientes` | Admin: nombre, dni, area_id; opcionales datos_medicos, cama_id, enfermero_asignado_id |
+| POST | `/api/pacientes` | Autenticado: nombre, dni, area_id; opcionales datos_medicos, cama_id, enfermero_asignado_id |
 | PUT | `/api/pacientes/:id` | Autenticado: campos a modificar |
-| DELETE | `/api/pacientes/:id` | Admin |
-| POST | `/api/llamados/crear` | Autenticado: paciente_id, area_id, origen, tipo |
+| DELETE | `/api/pacientes/:id` | Autenticado |
+| POST | `/api/llamados/crear` | Autenticado: paciente_id, origen, tipo; area_id opcional (deduce el área del paciente), simulacion opcional |
 | PUT | `/api/llamados/:id/atender` | Autenticado; cuerpo vacío; enfermero tomado del JWT |
 | GET | `/api/llamados` | Autenticado; filtros de llamados |
 | GET | `/api/llamados/activos` | Autenticado; siempre estado No Atendido |
@@ -87,6 +119,7 @@ Content-Type: application/json
 | GET | `/health/ready` | Público; comprueba conexión y columnas del esquema, sin devolver registros |
 
 Tipos de área: `Quirofano`, `Habitacion`, `Bano`, `Recepcion`, `Secretaria`, `SalaEspera`, `Enfermeria`, `Pasillo`.
+El registro admite también nombre, area_asignada_id y turno (`Manana`, `Tarde`, `Noche`). Crea Auth y completa perfiles mediante upsert; si falla el perfil, intenta revertir el alta de Auth. La creación de llamados admite `simulacion: true` para despacho de enfermero y atención automática a los 30 segundos. El worker recupera los vencimientos guardados después de reiniciar. Las conexiones entran también a `usuario:<uuid>` para `notificacionEnfermero`.
 Las dimensiones ancho/alto son porcentajes mayores que 0 y menores o iguales que 100; valores predeterminados: 20 y 18.
 La API acepta los nombres del frontend y conserva compatibilidad de entrada con coord_x, coord_y y enfermero_id. No enviar un alias y su nombre original con valores distintos.
 Las respuestas y eventos incluyen coordenadas_x/y, enfermero_asignado_id, fecha_hora_activacion, fecha_hora_atencion y tiempo_respuesta_segundos cuando corresponda, además de las columnas históricas. El origen se devuelve como Baño y se acepta también Bano en las entradas.
@@ -130,7 +163,7 @@ socket.on('logSistema', mensaje => console.log(mensaje));
 socket.on('connect_error', error => console.error(error.message));
 ```
 
-El servidor incorpora cada conexión autorizada a `hospital`. `nuevoLlamado` y `codigoAzul` incluyen el llamado, paciente (id/nombre/dni), área, cama y timestamp. `llamadoAtendido` incluye id, tiempo_respuesta_seg, enfermero y fecha_atencion. `logSistema` es texto plano. Los eventos se emiten después de confirmar la escritura en PostgreSQL. Reconectar y consultar llamados activos permite recuperar el estado ante desconexiones; los eventos no tienen entrega persistente.
+El servidor incorpora cada conexión autorizada a `hospital`. `nuevoLlamado` y `codigoAzul` incluyen el llamado, paciente (id/nombre/dni), área, cama y timestamp. `llamadoAtendido` incluye llamado_id, tiempo_respuesta_segundos, enfermero y timestamp de atención. `logSistema` contiene `{ tipo, mensaje, timestamp }`. Los eventos se emiten después de confirmar la escritura en PostgreSQL. Reconectar y consultar llamados activos permite recuperar el estado ante desconexiones; los eventos no tienen entrega persistente. Se conservan las rutas `/api/usuarios` como aliases compatibles.
 
 ## Deploy en Render
 

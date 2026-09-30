@@ -1,0 +1,1 @@
+.anchor { position: absolute; transform: translate(-50%, -100%); z-index: 12; }.button { white-space: nowrap; padding: 7px 9px; background: #15803d; color: white; font-size: clamp(8px,.75vw,11px); border: 1px solid white; border-radius: 6px; box-shadow: 0 2px 8px #0003; }.error { background: #fef2f2; color: #b91c1c; padding: 8px; min-width: 150px; font-size: 11px; }

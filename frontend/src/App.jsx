@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import Pacientes from './pages/Pacientes';
 import Areas from './pages/Areas';
 import Usuarios from './pages/Usuarios';
+import Enfermeros from './pages/Enfermeros';
+import Camas from './pages/Camas';
 import ui from './styles/ui.module.css';
 import './App.css';
 import { useAuth } from './hooks/useAuth';
@@ -25,6 +27,8 @@ export default function App() {
       <Route path="/pacientes" element={<Pacientes />} />
       <Route path="/areas" element={<ProtectedRoute requiredRole="Administrador"><Areas /></ProtectedRoute>} />
       <Route path="/usuarios" element={<ProtectedRoute requiredRole="Administrador"><Usuarios /></ProtectedRoute>} />
+      <Route path="/enfermeros" element={<ProtectedRoute requiredRole="Administrador"><Enfermeros /></ProtectedRoute>} />
+      <Route path="/camas" element={<ProtectedRoute requiredRole="Administrador"><Camas /></ProtectedRoute>} />
       <Route path="/reportes" element={<Suspense fallback={<p className={ui.empty}>Cargando reportes…</p>}><Reportes /></Suspense>} />
     </Route>
     <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -39,3 +39,35 @@ export function mensajeError(error) {
 }
 export default api;
 
+const resourceAPI = path => ({
+  getAll: (params = {}, signal) => api.get(path, { params, signal }),
+  getById: (id, signal) => api.get(`${path}/${encodeURIComponent(id)}`, { signal }),
+  create: values => api.post(path, values),
+  update: (id, values) => api.put(`${path}/${encodeURIComponent(id)}`, values),
+  delete: id => api.delete(`${path}/${encodeURIComponent(id)}`),
+});
+
+export const pacientesAPI = resourceAPI('/api/pacientes');
+export const usuariosAPI = {
+  getAll: (params = {}, signal) => api.get('/api/auth/usuarios', { params, signal }),
+  register: values => api.post('/api/auth/register', values),
+  updateRol: (id, rol) => api.put(`/api/auth/usuarios/${encodeURIComponent(id)}/rol`, { rol }),
+  update: (id, values) => api.put(`/api/auth/usuarios/${encodeURIComponent(id)}`, values),
+  delete: id => api.delete(`/api/auth/usuarios/${encodeURIComponent(id)}`),
+};
+export const enfermerosAPI = {
+  getAll: (params = {}, signal) => api.get('/api/enfermeros', { params, signal }),
+};
+export const areasAPI = resourceAPI('/api/areas');
+export const camasAPI = resourceAPI('/api/camas');
+export const llamadosAPI = {
+  crear: values => api.post('/api/llamados/crear', values),
+  atender: id => api.put(`/api/llamados/${encodeURIComponent(id)}/atender`, {}),
+  getActivos: (params = {}, signal) => api.get('/api/llamados/activos', { params, signal }),
+  getAll: (params = {}, signal) => api.get('/api/llamados', { params, signal }),
+};
+export const reportesAPI = {
+  getEstadisticas: (params = {}, signal) => api.get('/api/reportes/estadisticas', { params, signal }),
+  exportPDF: (params = {}) => api.get('/api/reportes/export/pdf', { params, responseType: 'blob' }),
+  exportCSV: (params = {}) => api.get('/api/reportes/export/csv', { params, responseType: 'blob' }),
+};

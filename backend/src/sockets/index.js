@@ -15,7 +15,8 @@ export function configureSockets(server, env, auth) {
   });
   io.on('connection', socket => {
     socket.join('hospital');
-    socket.emit('logSistema', 'Conectado al sistema Código Azul.');
+    socket.join(`usuario:${socket.data.user.id}`);
+    socket.emit('logSistema', { tipo: 'info', mensaje: 'Conectado al sistema Código Azul.', timestamp: new Date().toISOString() });
     const expiry = setTimeout(() => socket.disconnect(true),
       Math.max(0, socket.data.user.exp * 1000 - Date.now()));
     expiry.unref();

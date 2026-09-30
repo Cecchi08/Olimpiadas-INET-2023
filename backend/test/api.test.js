@@ -22,8 +22,16 @@ function fixture() {
       let rows = table === 'perfiles' ? state.profiles : table === 'llamados' ? state.calls : [];
       let single = false;
       let count = false;
+      let error = null;
       const query = {
-        select(columns, options) { count = options?.count === 'exact'; return this; },
+        select(columns, options) {
+          assert.ok(!/[():!]/.test(columns), 'Las consultas de la API no deben incrustar relaciones');
+          if (/coordenadas_x|enfermero_asignado_id|fecha_hora_activacion/.test(columns)) {
+            error = { code: '42703', message: 'Columna inexistente en el esquema histórico de la prueba' };
+          }
+          count = options?.count === 'exact'; return this;
+        },
+        in(key, values) { rows = rows.filter(row => values.map(String).includes(String(row[key]))); return this; },
         eq(key, value) { rows = rows.filter(row => String(row[key]) === String(value)); return this; },
         gt(key, value) { rows = rows.filter(row => row[key] > value); return this; },
         lte(key, value) { rows = rows.filter(row => row[key] <= value); return this; },
@@ -34,10 +42,11 @@ function fixture() {
         maybeSingle() { single = true; return this; },
         single() { single = true; return this; },
         insert(input) { state.mutations.push({ table, input }); rows = [{ id: 1, ...input }]; return this; },
+        upsert(input) { state.mutations.push({ table, input }); rows = [input]; return this; },
         update(input) { state.mutations.push({ table, input }); rows = [{ id: 1, ...input }]; return this; },
         delete() { rows = [{ id: 1 }]; return this; },
         then(resolve, reject) { return Promise.resolve({ data: single ? rows[0] ?? null : rows,
-          error: null, count: count ? rows.length : null }).then(resolve, reject); }
+          error, count: count ? rows.length : null }).then(resolve, reject); }
       };
       return query;
     },
@@ -59,7 +68,10 @@ function fixture() {
       }
       return { data: { total_llamados: state.calls.length }, error: null };
     },
-    auth: { admin: { async createUser(input) {
+    auth: { admin: { async deleteUser(id) {
+      state.profiles = state.profiles.filter(profile => profile.id !== id);
+      return { error: null };
+    }, async createUser(input) {
       const profile = { id: '33333333-3333-4333-8333-333333333333', email: input.email, rol: input.app_metadata.rol };
       state.profiles.push(profile);
       return { data: { user: profile }, error: null };
@@ -86,9 +98,12 @@ test('HTTP: autenticación, permisos y validaciones', async () => {
   assert.equal(login.body.rol, 'Administrador');
   await request(app).post('/api/auth/login').send({ email: admin.email, password: 'incorrecta' }).expect(401);
   await request(app).get('/api/auth/me').set('Authorization', `Bearer ${login.body.token}`).expect(200);
-  for (const path of ['/auth/register', '/areas', '/camas', '/pacientes']) {
+  for (const path of ['/auth/register', '/areas', '/camas']) {
     await request(app).post(`/api${path}`).set('Authorization', `Bearer ${nurseToken}`).send({}).expect(403);
   }
+  await request(app).post('/api/pacientes').set('Authorization', `Bearer ${nurseToken}`)
+    .send({ nombre: 'Paciente', dni: '12345678', area_id: 1 }).expect(201);
+  await request(app).delete('/api/pacientes/1').set('Authorization', `Bearer ${nurseToken}`).expect(204);
   await request(app).post('/api/auth/register').set('Authorization', `Bearer ${adminToken}`)
     .send({ email: 'new@hospital.com', password: 'long-password-123', rol: 'Generico' }).expect(201);
   await request(app).post('/api/areas').set('Authorization', `Bearer ${adminToken}`)
@@ -137,6 +152,17 @@ test('HTTP: contrato del frontend, dimensiones, enfermero y directorio protegido
   assert.equal(users.body.data[0].email, admin.email);
   await request(app).get('/api/usuarios').set(nurseHeader).expect(403);
   await request(app).get('/api/usuarios').expect(401);
+  const canonical = await request(app).get('/api/auth/usuarios').set(adminHeader).expect(200);
+  assert.equal(canonical.body.data[0].id, admin.id);
+  await request(app).get('/api/auth/usuarios').set(nurseHeader).expect(403);
+  await request(app).put(`/api/auth/usuarios/${nurse.id}/rol`).set(nurseHeader)
+    .send({ rol: 'Administrador' }).expect(403);
+  await request(app).put(`/api/auth/usuarios/${nurse.id}/rol`).set(adminHeader).send({}).expect(400);
+  await request(app).put(`/api/auth/usuarios/${nurse.id}/rol`).set(adminHeader)
+    .send({ rol: 'Administrador', area_asignada_id: 99 }).expect(200);
+  assert.deepEqual(state.mutations.at(-1).input, { rol: 'Administrador' });
+  await request(app).delete(`/api/auth/usuarios/${admin.id}`).set(adminHeader).expect(409);
+  await request(app).delete(`/api/auth/usuarios/${nurse.id}`).set(adminHeader).expect(204);
 });
 
 test('HTTP: Baño en llamadas y filtros, aliases en eventos y fechas', async () => {
@@ -161,11 +187,16 @@ test('HTTP: flujo de emergencia y eventos después de guardar', async () => {
   const token = auth.sign(nurse);
   const header = { Authorization: `Bearer ${token}` };
   await request(app).post('/api/llamados/crear').set(header)
-    .send({ paciente_id: 1, area_id: 1, origen: 'Cama', tipo: 'Emergencia' }).expect(201);
-  assert.deepEqual(state.events.map(e => e.event), ['nuevoLlamado', 'codigoAzul', 'logSistema']);
+    .send({ paciente_id: 1, origen: 'Cama', tipo: 'Emergencia' }).expect(201);
+  assert.deepEqual(state.events.map(e => e.event), ['nuevoLlamado', 'codigoAzul', 'logSistema', 'logSistema', 'logSistema']);
   assert.ok(state.events[0].payload.timestamp);
+  const log = state.events.find(event => event.event === 'logSistema').payload;
+  assert.equal(log.tipo, 'warning');
+  assert.match(log.mensaje, /Paciente activó Código Azul en Habitación \(Cama\)/);
+  assert.ok(Number.isFinite(Date.parse(log.timestamp)));
   await request(app).put('/api/llamados/1/atender').set(header).send({ enfermero_id: admin.id }).expect(200);
   assert.equal(state.events.find(e => e.event === 'llamadoAtendido').payload.enfermero.id, nurse.id);
+  assert.ok(Number.isFinite(Date.parse(state.events.find(e => e.event === 'llamadoAtendido').payload.timestamp)));
   await request(app).put('/api/llamados/1/atender').set(header).expect(409);
   assert.equal(state.events.filter(e => e.event === 'llamadoAtendido').length, 1);
   const active = await request(app).get('/api/llamados/activos').set(header).expect(200);
@@ -226,7 +257,27 @@ test('Socket.IO: rechaza anónimos y autoriza room hospital', { timeout: 10000 }
   t.after(() => client.close());
   await once(client, 'connect');
   assert.equal(io.sockets.adapter.rooms.get('hospital').size, 1);
+  assert.equal(io.sockets.adapter.rooms.get(`usuario:${nurse.id}`).size, 1);
   const event = once(client, 'codigoAzul');
   io.to('hospital').emit('codigoAzul', { id: 42 });
   assert.equal((await event)[0].id, 42);
+});
+
+test('personal: permisos, asignación, rol y eliminación real de Auth', async () => {
+  const { app, auth, state } = fixture();
+  const adminHeader={Authorization:`Bearer ${auth.sign(admin)}`};
+  const nurseHeader={Authorization:`Bearer ${auth.sign(nurse)}`};
+  const list=await request(app).get('/api/enfermeros').set(nurseHeader).expect(200);
+  assert.equal(list.body.data.length,1);
+  assert.equal(list.body.data[0].pacientes_asignados,0);
+  await request(app).put(`/api/usuarios/${nurse.id}`).set(nurseHeader).send({rol:'Administrador'}).expect(403);
+  await request(app).put(`/api/usuarios/${admin.id}`).set(adminHeader).send({rol:'Generico'}).expect(409);
+  await request(app).put(`/api/usuarios/${nurse.id}`).set(adminHeader).send({nombre:'Enfermero',area_asignada_id:1,turno:'Noche'}).expect(200);
+  const created=await request(app).post('/api/auth/register').set(adminHeader)
+    .send({email:'nuevo@hospital.com',password:'una-clave-segura',rol:'Generico',nombre:'Nuevo',area_asignada_id:1,turno:'Manana'}).expect(201);
+  assert.equal(created.body.nombre,'Nuevo');
+  assert.equal(state.mutations.at(-1).input.turno,'Manana');
+  await request(app).delete(`/api/usuarios/${admin.id}`).set(adminHeader).expect(409);
+  await request(app).delete(`/api/usuarios/${nurse.id}`).set(adminHeader).expect(204);
+  assert.ok(!state.profiles.some(profile=>profile.id===nurse.id));
 });

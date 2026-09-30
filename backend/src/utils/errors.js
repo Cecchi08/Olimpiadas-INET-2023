@@ -8,6 +8,13 @@ export class AppError extends Error {
 
 export function dbResult({ data, error }) {
   if (error) {
+    if (['PGRST200', 'PGRST201'].includes(error.code)) {
+      // Estos errores contienen nombres de esquema, no valores de pacientes.
+      console.error('Error de relaciones PostgREST', {
+        code: error.code, message: error.message, details: error.details, hint: error.hint
+      });
+      throw new AppError(503, 'Relación de base de datos inexistente o ambigua. Revisar los logs del servidor.');
+    }
     const errors = {
       '23505': [409, 'El registro ya existe o la cama está ocupada'],
       '23503': [409, 'Referencia inexistente o registro utilizado por otros datos'],
