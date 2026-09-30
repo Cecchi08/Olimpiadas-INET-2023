@@ -1,12 +1,33 @@
-.sidebar { position: sticky; top: 0; height: 100dvh; min-width: 0; background: #1e293b; color: #cbd5e1; padding: 30px 18px 20px; display: flex; flex-direction: column; }
-.brand { display: flex; align-items: center; gap: 10px; color: white; font-size: 22px; font-weight: 650; letter-spacing: -.6px; padding: 0 8px; }
-.brand small { display: block; font-size: 8px; letter-spacing: 1.6px; color: #94a3b8; margin-top: 5px; }
-.cross { display: grid; place-items: center; background: #3b82f6; width: 36px; height: 36px; border-radius: 10px; font-size: 32px; font-weight: 400; }
-.navLabel { margin: 47px 13px 15px; font-size: 9px; color: #8190a7; letter-spacing: 1.4px; font-weight: 600; }
-.nav { display: grid; gap: 7px; }.link, .active { display: flex; align-items: center; gap: 12px; padding: 13px 14px; font-size: 13px; border-radius: 7px; }
-.link:hover { background: #ffffff08; color: white; }.active { background: #3b82f6; color: white; box-shadow: 0 4px 12px #00000016; }
-.support { margin-top: auto; padding: 30px 12px; color: #6f87ab; }.support p { margin: 8px 0 0; font-size: 12px; color: #aab8cc; }.support span { display: block; font-size: 10px; color: #72849e; margin-top: 6px; }
-.account { display: flex; gap: 10px; padding: 20px 5px 10px; border-top: 1px solid #ffffff10; align-items: center; }.avatar { background: #334155; color: #cbd5e1; border-radius: 50%; width: 34px; height: 34px; display: grid; place-items: center; font-size: 11px; flex-shrink: 0; }.account div { min-width: 0; }.account strong { display: block; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e2e8f0; font-weight: 500; }.account small { display: block; font-size: 10px; color: #8293ae; margin-top: 5px; }
-.logout { background: none; border: 0; color: #94a3b8; display: flex; align-items: center; gap: 9px; padding: 12px 9px; font-size: 11px; }.logout:hover { color: white; }
-.skip { position: fixed; left: 12px; top: 0; transform: translateY(-150%); }.skip:focus { transform: translateY(0); background: white; color: #1e293b; padding: 12px; z-index: 100; }
-@media(max-width: 760px) { .sidebar { position: static; height: auto; padding: 18px 16px; }.brand { font-size: 20px; }.navLabel, .support, .account { display: none; }.nav { display: flex; overflow-x: auto; margin-top: 20px; gap: 4px; }.link, .active { padding: 10px; font-size: 11px; gap: 6px; }.logout { position: absolute; top: 20px; right: 12px; }.logout svg { display: none; } }
+.sidebar { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-width: 0; min-height: 0; overflow: hidden; padding: 30px 18px 20px; background: #1e293b; color: #fff; }
+.brand { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 8px; font-size: 22px; font-weight: 650; letter-spacing: -.6px; }
+.brand small { display: block; margin-top: 5px; color: #cbd5e1; font-size: 8px; letter-spacing: 1.6px; }
+.cross { flex-shrink: 0; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #3b82f6; font-size: 32px; font-weight: 400; line-height: 1; }
+.navLabel { flex-shrink: 0; margin: 36px 13px 15px; color: #cbd5e1; font-size: 9px; letter-spacing: 1.4px; font-weight: 600; }
+.nav { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 7px; padding: 4px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #64748b #1e293b; }
+.link, .active { flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 7px; font-size: 13px; transition: background-color .15s, color .15s; }
+.link { color: #e2e8f0; }
+.link:hover { background: #334155; color: #fff; }
+.active { background: #3b82f6; color: #fff; box-shadow: 0 4px 12px #00000016; }
+.active:hover { background: #2563eb; }
+.support { flex-shrink: 0; padding: 22px 12px; color: #93c5fd; }
+.support p { margin: 8px 0 0; font-size: 12px; color: #e2e8f0; }
+.support span { display: block; margin-top: 6px; font-size: 10px; color: #cbd5e1; }
+.account { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 20px 5px 10px; border-top: 1px solid #475569; }
+.avatar { flex-shrink: 0; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #334155; color: #e2e8f0; font-size: 11px; }
+.account div { min-width: 0; }
+.account strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 500; }
+.account small { display: block; margin-top: 5px; color: #cbd5e1; font-size: 10px; }
+.logout { flex-shrink: 0; display: flex; align-items: center; gap: 9px; padding: 12px 9px; border: 0; border-radius: 7px; background: transparent; color: #e2e8f0; font-size: 11px; }
+.logout:hover { background: #334155; color: #fff; }
+.skip { position: fixed; left: 12px; top: 0; transform: translateY(-150%); }
+.skip:focus { transform: translateY(0); padding: 12px; z-index: 100; background: #fff; color: #1e293b; }
+@media (max-height: 740px) and (min-width: 761px) { .support { display: none; } .navLabel { margin-top: 20px; } }
+@media (max-width: 760px) {
+  .sidebar { position: relative; height: 100%; padding: 18px 16px 10px; }
+  .brand { width: fit-content; padding: 0; font-size: 20px; }
+  .navLabel, .support, .account { display: none; }
+  .nav { flex-direction: row; align-items: center; margin-top: 12px; gap: 4px; overflow-x: auto; overflow-y: hidden; }
+  .link, .active { padding: 10px; font-size: 11px; gap: 6px; }
+  .logout { position: absolute; top: 20px; right: 12px; }
+  .logout svg { display: none; }
+}

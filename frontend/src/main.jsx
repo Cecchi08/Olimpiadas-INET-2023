@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import App from './App';
 import './index.css';
-import './styles/global.module.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode><BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

@@ -26,7 +26,7 @@ export default function Dashboard() {
     ['bed', 'Camas disponibles', loading || error ? '—' : data['/api/camas']?.filter(cama => !data['/api/pacientes']?.some(patient => String(patient.cama_id) === String(cama.id))).length, 'Disponibilidad actual', styles.green],
     ['clock', 'Monitoreo en vivo', conectado ? 'Conectado' : 'Sin conexión', conectado ? 'Recepción de eventos activa' : 'Intentando reconectar', styles.purple],
   ];
-  return <>
+  return <div className={styles.dashboard}>
     <div className={ui.header}><div><p className={ui.eyebrow}>CENTRAL DE MONITOREO</p><h1 className={ui.title}>Todo el hospital, conectado.</h1><p className={ui.subtitle}>Supervisá la atención y respondé a cada llamado en tiempo real.</p></div><span className={styles.date}>{new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
     {error && <p className={ui.error} role="alert">{error}</p>}
     <div className={styles.metrics}>{metrics.map(([icon, label, value, help, color]) => <article className={styles.metric} key={label}><div className={styles.metricTop}><span>{label}</span><span className={color}><Icon name={icon} size={17} /></span></div><strong>{value}</strong><small>{help}</small></article>)}</div>
@@ -37,5 +37,5 @@ export default function Dashboard() {
       {!activos.length ? <div className={styles.clear}><span><Icon name="pulse" size={25} /></span><strong>{sincronizado ? 'No hay llamados pendientes' : 'Esperando datos del servidor'}</strong><p>{sincronizado ? 'Los nuevos llamados aparecerán aquí automáticamente.' : 'Verificá la conexión con el sistema hospitalario.'}</p></div> :
         <div className={styles.calls}>{activos.map(call => <article key={call.id}><span className={call.tipo === 'Emergencia' ? styles.emergency : styles.normal}>{call.tipo}</span><div><strong>{call.paciente?.nombre || `Paciente #${call.paciente_id}`}</strong><small>{call.area?.nombre || `Área #${call.area_id}`} · {call.origen} · {formatearHora(call.fecha_hora_activacion || call.fecha_activacion)}</small></div><button className={ui.primary} disabled={pending !== null || !conectado || atendidos.includes(call.id)} onClick={() => atender(call.id)}>{pending === call.id ? 'Atendiendo…' : atendidos.includes(call.id) ? 'Atendido' : 'Atender llamado'}</button></article>)}</div>}
     </section>
-  </>;
+  </div>;
 }
