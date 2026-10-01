@@ -31,7 +31,7 @@ export default function Dashboard() {
     {error && <p className={ui.error} role="alert">{error}</p>}
     <div className={styles.metrics}>{metrics.map(([icon, label, value, help, color]) => <article className={styles.metric} key={label}><div className={styles.metricTop}><span>{label}</span><span className={color}><Icon name={icon} size={17} /></span></div><strong>{value}</strong><small>{help}</small></article>)}</div>
     {!sincronizado && <p className={ui.notice} role="status">El estado de los llamados todavía no está sincronizado. Los datos pueden estar desactualizados.</p>}
-    <div className={styles.board}><MapaHospital /><Consola /></div>
+    <section className={styles.board} aria-label="Mapa y consola del hospital"><MapaHospital /><Consola /></section>
     <section className={styles.activity}><header><div><h2>Llamados que requieren atención</h2><p>Seguimiento de solicitudes activas del hospital</p></div><span className={ui.badge}>{sincronizado ? activos.length : '—'} pendientes</span></header>
       {actionError && <p className={ui.error} role="alert">{actionError}</p>}
       {!activos.length ? <div className={styles.clear}><span><Icon name="pulse" size={25} /></span><strong>{sincronizado ? 'No hay llamados pendientes' : 'Esperando datos del servidor'}</strong><p>{sincronizado ? 'Los nuevos llamados aparecerán aquí automáticamente.' : 'Verificá la conexión con el sistema hospitalario.'}</p></div> :

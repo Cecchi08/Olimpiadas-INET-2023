@@ -53,7 +53,7 @@ export default function MapaHospital() {
     } catch (failure) { setActionError(mensajeError(failure)); }
     finally { setPending(null); }
   }
-  return <section className={styles.panel}>
+  return <div className={styles.container}><section className={styles.panel}>
     <header className={styles.header}><div><span className={styles.icon}><Icon name="areas" size={18} /></span><h2>Mapa del hospital<small>Distribución de áreas y pacientes</small></h2></div><button className={ui.secondary} onClick={reload} disabled={loading} aria-label="Actualizar mapa">↻ Actualizar</button></header>
     <Feedback error={error || actionError} success={success} />
     <div className={styles.viewport}><div className={styles.map} aria-label="Plano del hospital, coordenadas sobre un canvas de 1920 por 1080">
@@ -84,14 +84,17 @@ export default function MapaHospital() {
           moviendo={Boolean(moving)} onLlegada={() => { if (moving) registrarLlegada(call); }} />;
       })}
       {activos.filter(call => fases[call.id] === 'llego').map(call => <BotonAtender key={call.id} llamado={call} {...target(call)} />)}
-      <BotonCodigoAzul disabled={loading || Boolean(error)} onClick={() => setModal({})} />
     </div></div>
     <footer className={styles.legend}><div><span><i className={styles.patient} />Paciente</span><span><i className={styles.nurse} />Enfermero asignado</span><span><i className={styles.call} />Llamado activo</span><span><i className={styles.bed} />Cama libre</span></div><small>Vista de planta · 1920 × 1080</small></footer>
     {areas.some(area => !geometryValid(area)) && <p className={ui.notice}>Hay áreas sin coordenadas válidas que no pueden ubicarse en el plano.</p>}
+    </section>
+    <footer className={styles.actions} aria-label="Acciones del mapa">
+      <BotonCodigoAzul disabled={loading || Boolean(error)} onClick={() => setModal({})} />
+    </footer>
     {modal && <ModalSimulacion pacientes={pacientes} areas={areas} initialPatient={modal.patient} onClose={() => setModal(null)} onSuccess={setSuccess} />}
     {visibleAlert && createPortal(<motion.div key={visibleAlert.eventId} className={styles.fullAlert} role="alert"
       initial={{ opacity: .2 }} animate={{ opacity: reduce ? .25 : [.2, .5, .2] }} transition={{ duration: 1, repeat: 2 }}>
       <strong>CÓDIGO AZUL · {visibleAlert.area?.nombre || 'Emergencia'}</strong>
     </motion.div>, document.body)}
-  </section>;
+  </div>;
 }

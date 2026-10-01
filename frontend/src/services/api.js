@@ -2,16 +2,23 @@ import axios from 'axios';
 
 export const TOKEN_KEY = 'codigoAzul.token';
 export const AUTH_EXPIRED = 'codigoAzul:auth-expired';
+let authenticatedToken = null;
+export function setAuthenticatedToken(token) { authenticatedToken = token; }
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000', timeout: 20000 });
 api.interceptors.request.use(config => {
   const token = localStorage.getItem(TOKEN_KEY);
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token && !config.headers.Authorization) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 api.interceptors.response.use(response => response, error => {
   const requestToken = error.config?.headers?.Authorization;
-  if (error.response?.status === 401 && !error.config?.url?.endsWith('/auth/login') &&
+  const path = error.config?.url?.split('?')[0];
+  const publicPage = ['/', '/login'].includes(window.location.pathname);
+  if (error.response?.status === 401 && !error.config?.skipAuthRedirect && !publicPage &&
+      path !== '/api/auth/login' && path !== '/api/auth/me' &&
+      authenticatedToken && requestToken === `Bearer ${authenticatedToken}` &&
       requestToken === `Bearer ${localStorage.getItem(TOKEN_KEY)}`) {
+    authenticatedToken = null;
     localStorage.removeItem(TOKEN_KEY);
     window.dispatchEvent(new Event(AUTH_EXPIRED));
   }
